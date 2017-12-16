@@ -169,7 +169,7 @@ int lgw_spi_w(void *spi_target, uint8_t spi_mux_mode, uint8_t spi_mux_target, ui
     int spi_device;
     uint8_t out_buf[3];
     uint8_t command_size;
-    struct spi_ioc_transfer k;
+    struct spi_ioc_transfer k = {0};
     int a;
 
     /* check input variables */
@@ -255,6 +255,7 @@ int lgw_spi_r(void *spi_target, uint8_t spi_mux_mode, uint8_t spi_mux_target, ui
 
     a = ioctl(spi_device, SPI_IOC_MESSAGE(2), &k);
 
+    #if 0
     int ret = 0;
     for (ret = 0; ret < sizeof(in_buf); ret++) {
         if (!(ret % 8))
@@ -262,6 +263,7 @@ int lgw_spi_r(void *spi_target, uint8_t spi_mux_mode, uint8_t spi_mux_target, ui
         printf("%.2X ", in_buf[ret]);
     }
     puts("");
+    #endif
 
     /* determine return code */
     //if (a != (int)k[0].len) {
@@ -270,7 +272,7 @@ int lgw_spi_r(void *spi_target, uint8_t spi_mux_mode, uint8_t spi_mux_target, ui
         //return LGW_SPI_ERROR;
     } else {
         DEBUG_MSG("Note: SPI read success\n");
-        *data = in_buf[command_size - 1];
+        *data = in_buf[0];
         return LGW_SPI_SUCCESS;
     }
     return LGW_SPI_SUCCESS;
