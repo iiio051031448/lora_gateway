@@ -172,8 +172,30 @@ int32_t lgw_bw_getval(int x);
 /* -------------------------------------------------------------------------- */
 /* --- PRIVATE FUNCTIONS DEFINITION ----------------------------------------- */
 
+void _dump_data(const char *func, int line, unsigned char *data, int len)
+{
+    int ret = 0;
+
+    printf("=========================\n");
+    printf("[%s][%d]\n", func, line);
+    for (ret = 0; ret < len; ret++) {
+        if (!(ret % 8))
+            puts("");
+        printf("%.2X ", data[ret]);
+    }
+    puts("");
+    printf("=========================\n");
+
+    return;
+}
+#define DUMP_DATA(d, l) \
+    do { \
+        _dump_data(__func__, __LINE__, (d), (l)); \
+    } while (0)
+
 /* size is the firmware size in bytes (not 14b words) */
-int load_firmware(uint8_t target, uint8_t *firmware, uint16_t size) {
+int load_firmware(uint8_t target, uint8_t *firmware, uint16_t size) 
+{
     int reg_rst;
     int reg_sel;
     uint8_t fw_check[8192];
@@ -202,17 +224,27 @@ int load_firmware(uint8_t target, uint8_t *firmware, uint16_t size) {
 
     /* reset the targeted MCU */
     lgw_reg_w(reg_rst, 1);
+    lgw_reg_w(reg_rst, 1);
+    lgw_reg_w(reg_rst, 1);
+    lgw_reg_w(reg_rst, 1);
 
     /* set mux to access MCU program RAM and set address to 0 */
     lgw_reg_w(reg_sel, 0);
     lgw_reg_w(LGW_MCU_PROM_ADDR, 0);
 
+    lgw_reg_w(LGW_MCU_PROM_DATA, 0xBE);
+    lgw_reg_r(LGW_MCU_PROM_DATA, &dummy ); /* bug workaround */
+    DUMP_DATA(&dummy, 1);
+
     /* write the program in one burst */
     lgw_reg_wb(LGW_MCU_PROM_DATA, firmware, size);
+    DUMP_DATA(firmware, 128);
 
     /* Read back firmware code for check */
     lgw_reg_r( LGW_MCU_PROM_DATA, &dummy ); /* bug workaround */
+    DUMP_DATA(&dummy, 1);
     lgw_reg_rb( LGW_MCU_PROM_DATA, fw_check, size );
+    DUMP_DATA(fw_check, 128);
     if (memcmp(firmware, fw_check, size) != 0) {
         printf ("ERROR: Failed to load fw %d\n", (int)target);
         return -1;

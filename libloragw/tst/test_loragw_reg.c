@@ -17,8 +17,13 @@ Maintainer: Sylvain Miermont
 /* -------------------------------------------------------------------------- */
 /* --- DEPENDANCIES --------------------------------------------------------- */
 
-#include <stdint.h>
+#define _GNU_SOURCE
 #include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <time.h>
+#include <sys/types.h>
 
 #include "loragw_reg.h"
 
@@ -55,7 +60,6 @@ int main()
     lgw_reg_w(LGW_IMPLICIT_PAYLOAD_LENGHT, test_value);
     lgw_reg_r(LGW_IMPLICIT_PAYLOAD_LENGHT, &read_value);
     printf("IMPLICIT_PAYLOAD_LENGHT = %d (should be %d)\n", read_value, test_value);
-    return 0;
 
     /* 8b signed */
     /* NO SUCH REG AVAILABLE */
@@ -107,17 +111,33 @@ int main()
 
     /* --- BURST WRITE AND READ TEST --- */
 
-    return 0;
     /* initialize data for SPI test */
     lfsr = 0xFFFF;
-    for(i=0; i<BURST_TEST_LENGTH; ++i) {
+    for(i=0; i < BURST_TEST_LENGTH; ++i) {
         burst_buffout[i] = (uint8_t)(lfsr ^ (lfsr >> 4));
         /* printf("%05d # 0x%04x 0x%02x\n", i, lfsr, burst_buffout[i]); */
         lfsr = (lfsr & 1) ? ((lfsr >> 1) ^ 0x8679) : (lfsr >> 1);
     }
 
-    lgw_reg_wb(LGW_TX_DATA_BUF_DATA, burst_buffout, 256);
-    lgw_reg_rb(LGW_RX_DATA_BUF_DATA, burst_buffin, 256);
+    struct timespec tp= {0};
+    unsigned long t_start_us = 0;
+    unsigned long t_wend_us = 0;
+    unsigned long t_rend_us = 0;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &tp) < 0) { }
+    t_start_us = tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
+
+    lgw_reg_wb(LGW_TX_DATA_BUF_DATA, burst_buffout, BURST_TEST_LENGTH);
+
+    if (clock_gettime(CLOCK_MONOTONIC, &tp) < 0) { }
+    t_wend_us = tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
+
+    lgw_reg_rb(LGW_RX_DATA_BUF_DATA, burst_buffin, BURST_TEST_LENGTH);
+
+    if (clock_gettime(CLOCK_MONOTONIC, &tp) < 0) { }
+    t_rend_us = tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
+
+    printf("wb t: %ld us, rb t: %ld us\n", (t_wend_us - t_start_us), (t_rend_us - t_wend_us));
 
     /* impossible to check in software,
     RX_DATA_BUF_DATA is read-only,
