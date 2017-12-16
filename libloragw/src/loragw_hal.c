@@ -224,27 +224,25 @@ int load_firmware(uint8_t target, uint8_t *firmware, uint16_t size)
 
     /* reset the targeted MCU */
     lgw_reg_w(reg_rst, 1);
-    lgw_reg_w(reg_rst, 1);
-    lgw_reg_w(reg_rst, 1);
-    lgw_reg_w(reg_rst, 1);
 
     /* set mux to access MCU program RAM and set address to 0 */
     lgw_reg_w(reg_sel, 0);
     lgw_reg_w(LGW_MCU_PROM_ADDR, 0);
 
-    lgw_reg_w(LGW_MCU_PROM_DATA, 0xBE);
-    lgw_reg_r(LGW_MCU_PROM_DATA, &dummy ); /* bug workaround */
-    DUMP_DATA(&dummy, 1);
-
     /* write the program in one burst */
+    int t_size = 32;
     lgw_reg_wb(LGW_MCU_PROM_DATA, firmware, size);
-    DUMP_DATA(firmware, 128);
+    DUMP_DATA(firmware, t_size);
+
+    lgw_reg_w(reg_sel, 0);
+    lgw_reg_w(LGW_MCU_PROM_ADDR, 0);
 
     /* Read back firmware code for check */
     lgw_reg_r( LGW_MCU_PROM_DATA, &dummy ); /* bug workaround */
     DUMP_DATA(&dummy, 1);
-    lgw_reg_rb( LGW_MCU_PROM_DATA, fw_check, size );
-    DUMP_DATA(fw_check, 128);
+
+    lgw_reg_rb(LGW_MCU_PROM_DATA, fw_check, size);
+    DUMP_DATA(fw_check, t_size);
     if (memcmp(firmware, fw_check, size) != 0) {
         printf ("ERROR: Failed to load fw %d\n", (int)target);
         return -1;
