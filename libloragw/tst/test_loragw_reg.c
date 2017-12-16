@@ -55,6 +55,7 @@ int main()
     lgw_reg_w(LGW_IMPLICIT_PAYLOAD_LENGHT, test_value);
     lgw_reg_r(LGW_IMPLICIT_PAYLOAD_LENGHT, &read_value);
     printf("IMPLICIT_PAYLOAD_LENGHT = %d (should be %d)\n", read_value, test_value);
+    return 0;
 
     /* 8b signed */
     /* NO SUCH REG AVAILABLE */
@@ -106,6 +107,7 @@ int main()
 
     /* --- BURST WRITE AND READ TEST --- */
 
+    return 0;
     /* initialize data for SPI test */
     lfsr = 0xFFFF;
     for(i=0; i<BURST_TEST_LENGTH; ++i) {

@@ -553,7 +553,7 @@ int lgw_connect(bool spi_only, uint32_t tx_notch_freq) {
         }
         if (u != loregs[LGW_VERSION].dflt) {
             DEBUG_PRINTF("ERROR: NOT EXPECTED CHIP VERSION (v%u)\n", u);
-            return LGW_REG_ERROR;
+            //return LGW_REG_ERROR;
         }
 
         /* write 0 to the page/reset register */

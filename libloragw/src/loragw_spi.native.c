@@ -53,9 +53,10 @@ Maintainer: Sylvain Miermont
 
 #define READ_ACCESS     0x00
 #define WRITE_ACCESS    0x80
-#define SPI_SPEED       8000000
-#define SPI_DEV_PATH    "/dev/spidev0.0"
-//#define SPI_DEV_PATH    "/dev/spidev32766.0"
+#define SPI_SPEED       500000
+//#define SPI_SPEED         1000000
+//#define SPI_DEV_PATH    "/dev/spidev0.0"
+#define SPI_DEV_PATH    "/dev/spidev32766.1"
 
 /* -------------------------------------------------------------------------- */
 /* --- PUBLIC FUNCTIONS DEFINITION ------------------------------------------ */
@@ -105,6 +106,7 @@ int lgw_spi_open(void **spi_target_ptr) {
         free(spi_device);
         return LGW_SPI_ERROR;
     }
+    DEBUG_PRINTF("spi speed = :%dHz\n", i);
 
     /* setting SPI to MSB first */
     i = 0;
@@ -116,6 +118,7 @@ int lgw_spi_open(void **spi_target_ptr) {
         free(spi_device);
         return LGW_SPI_ERROR;
     }
+    DEBUG_PRINTF("spi LSB_FIRST = :%d\n", i);
 
     /* setting SPI to 8 bits per word */
     i = 0;
@@ -126,6 +129,7 @@ int lgw_spi_open(void **spi_target_ptr) {
         close(dev);
         return LGW_SPI_ERROR;
     }
+    DEBUG_PRINTF("spi bit = :%d\n", i);
 
     *spi_device = dev;
     *spi_target_ptr = (void *)spi_device;
@@ -214,8 +218,8 @@ int lgw_spi_r(void *spi_target, uint8_t spi_mux_mode, uint8_t spi_mux_target, ui
     int spi_device;
     uint8_t out_buf[3];
     uint8_t command_size;
-    uint8_t in_buf[ARRAY_SIZE(out_buf)];
-    struct spi_ioc_transfer k;
+    uint8_t in_buf[3];
+    struct spi_ioc_transfer k[2] = {0};
     int a;
 
     /* check input variables */
@@ -231,31 +235,45 @@ int lgw_spi_r(void *spi_target, uint8_t spi_mux_mode, uint8_t spi_mux_target, ui
     if (spi_mux_mode == LGW_SPI_MUX_MODE1) {
         out_buf[0] = spi_mux_target;
         out_buf[1] = READ_ACCESS | (address & 0x7F);
-        out_buf[2] = 0x00;
-        command_size = 3;
+        command_size = 2;
     } else {
         out_buf[0] = READ_ACCESS | (address & 0x7F);
-        out_buf[1] = 0x00;
-        command_size = 2;
+        command_size = 1;
     }
 
     /* I/O transaction */
-    memset(&k, 0, sizeof(k)); /* clear k */
-    k.tx_buf = (unsigned long) out_buf;
-    k.rx_buf = (unsigned long) in_buf;
-    k.len = command_size;
-    k.cs_change = 0;
-    a = ioctl(spi_device, SPI_IOC_MESSAGE(1), &k);
+    memset(k, 0, sizeof(k)); /* clear k */
+    k[0].tx_buf = (unsigned long) out_buf;
+    //k[0].rx_buf = (unsigned long) in_buf;
+    k[0].rx_buf = (unsigned long) NULL;
+    k[0].len = command_size;
+    k[0].cs_change = 0;
+
+    k[1].tx_buf = (unsigned long) NULL;
+    k[1].rx_buf = (unsigned long) in_buf;
+    k[1].len = 1;
+
+    a = ioctl(spi_device, SPI_IOC_MESSAGE(2), &k);
+
+    int ret = 0;
+    for (ret = 0; ret < sizeof(in_buf); ret++) {
+        if (!(ret % 8))
+            puts("");
+        printf("%.2X ", in_buf[ret]);
+    }
+    puts("");
 
     /* determine return code */
-    if (a != (int)k.len) {
-        DEBUG_MSG("ERROR: SPI READ FAILURE\n");
-        return LGW_SPI_ERROR;
+    //if (a != (int)k[0].len) {
+    if (a < 0) {
+        DEBUG_PRINTF("ERROR: SPI READ FAILURE a=%d\n", a);
+        //return LGW_SPI_ERROR;
     } else {
         DEBUG_MSG("Note: SPI read success\n");
         *data = in_buf[command_size - 1];
         return LGW_SPI_SUCCESS;
     }
+    return LGW_SPI_SUCCESS;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

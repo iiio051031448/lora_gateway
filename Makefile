@@ -1,7 +1,7 @@
 ### Environment constants 
 
-ARCH ?=
-CROSS_COMPILE ?=
+ARCH ?=mipsel
+CROSS_COMPILE ?=mipsel-openwrt-linux-
 export
 
 ### general build targets
